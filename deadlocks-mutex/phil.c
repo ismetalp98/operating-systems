@@ -26,27 +26,28 @@ void return_forks(int id);
 void* philosopher(void* num);
 
 int main() {
-    //int ph_num[PHILOSOPHER_NUM];
+    int ph_num[PHILOSOPHER_NUM];
 
     if (pthread_mutex_init(&lock, NULL) != 0) {
-        printf("\n mutex init has failed\n");
+        printf("\n mutex init error\n");
         return 1;
     }
 
     //Init cond variables
     for (int i = 0; i < PHILOSOPHER_NUM; i++) {
         if (pthread_cond_init(&cond[i], NULL) != 0) {
-            printf("\n cond init has failed\n");
+            printf("\n cv init error\n");
             return 1;
         }
     }
 
-    //Create the five philosophers threads
+    //Create threads
     for (int i = 0; i < PHILOSOPHER_NUM; i++) {
-        pthread_create(&phil[i], NULL, philosopher, &i);
+        ph_num[i] = i;
+        pthread_create(&phil[i], NULL, philosopher, &ph_num[i]);
     }
 
-    //Join all five philosophers threads
+    //Join threads
     for (int i = 0; i < PHILOSOPHER_NUM; i++) {
         pthread_join(phil[i], NULL);
     }
@@ -59,18 +60,14 @@ int main() {
     return 0;
 }
 
-//Philosopher wastes time to think now
 void think(int id) {
-    int thinkTime = ((rand()) % 3) + 1;
+    int thinkTime = ((rand()) % MAX_THINK_SEC) + 1;
 
-    printf("Philosopher %d is thinking for %d seconds\n", id, thinkTime);
+    printf("Philosopher %d will be thinking for %d seconds\n", id, thinkTime);
     sleep(thinkTime);
-    printf("Philosopher %d reappears from sleep from thinking\n", id);
+    printf("Philosopher %d finished thinking\n", id);
 }
 
-//Checks to see if the philopher can pick up thier adjacent forks to eat
-//If succesful, change enum state to HUNGRY FIRST AND EATING AFTER
-//If not, philosopher is blocked by their conditional variable cond[id]
 void pickup_forks(int id) {
     int left = LEFT;
     int right = RIGHT;
@@ -78,48 +75,38 @@ void pickup_forks(int id) {
     state[id] = HUNGRY;
 
     while ((state[id] == HUNGRY) && ((state[left] == EATING) || (state[right] == EATING))) {
-        printf("Philosopher %i is hungry and waiting to pickup forks to eat \n", id);
+        printf("Philosopher %i is waiting forks to eat \n", id);
         pthread_cond_wait(&cond[id], &lock);
     }
     state[id] = EATING;
-    printf("Philosopher %d is allowed to eat now \n", id);
     pthread_mutex_unlock(&lock);
 }
 
-//After getting the forks, the philosopher can eat now
 void eat(int id) {
-    int eatingTime = ((rand()) % 3) + 1;
+    int eatingTime = ((rand()) % MAX_MEALS_SEC) + 1;
 
-    printf("Philosopher %d is eating for %d seconds\n", id, eatingTime);
+    printf("Philosopher %d has forks and will be eating for %d seconds\n", id, eatingTime);
     sleep(eatingTime);
-    printf("Philosopher %d reappears from sleep from eating\n", id);
+    printf("Philosopher %d finished his/her eating ", id);
 }
 
-//After the philosophers eat, put down the forks and change enum state to THINKING.
-//Signal the current left and right phillosphers blocked by their conditional
-//variable to have a chance to see if they can eat now
 void return_forks(int id) {
     int left = LEFT;
     int right = RIGHT;
     pthread_mutex_lock(&lock);
     state[id] = THINKING;
 
-    printf("Philosopher %d has put down forks\n", id);
+    printf("and put down forks\n");
     pthread_cond_signal(&cond[left]);
-    printf("Philosopher %d signaled philosopher %d to see if it can eat\n", id, left);
     pthread_cond_signal(&cond[right]);
-    printf("Philosopher %d signaled philosopher %d to see if it can eat\n", id, right);
     pthread_mutex_unlock(&lock);
 }
 
-//Main philosopher method  creating the five phillospher threads
 void* philosopher(void* num) {
     int id = *((int*)num);
 
-    while (1) {
-        think(id);
-        pickup_forks(id);
-        eat(id);
-        return_forks(id);
-    }
+    think(id);
+    pickup_forks(id);
+    eat(id);
+    return_forks(id);
 }
