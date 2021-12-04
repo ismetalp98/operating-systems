@@ -104,9 +104,10 @@ void return_forks(int id) {
 
 void* philosopher(void* num) {
     int id = *((int*)num);
-
-    think(id);
-    pickup_forks(id);
-    eat(id);
-    return_forks(id);
+    while (1) {
+        think(id);
+        pickup_forks(id);
+        eat(id);
+        return_forks(id);
+    }
 }
